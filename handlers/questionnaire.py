@@ -8,7 +8,9 @@ from keyboards import client_keyboard
 from dictionary import YES_SET, NO_SET, DONT_KNOW_SET, STOP_SET, CENSURE_SET
 from datetime import datetime
 import string
+import gspread
 
+gc = gspread.service_account(filename='movebot-359618-6eadda2de784.json')
 
 class FSMQuestion(StatesGroup):
     client_name = State()
@@ -45,8 +47,7 @@ class FSMQuestion(StatesGroup):
 async def begin(message: types.Message, state: FSMContext):
     await message.answer('Здравствуйте! Я Ваш личный помощник по организации перевозок. Для того, чтобы мы могли обработать заказ, и сделать максимально выгодное предложение, мне необходимо задать несколько вопросов. Для начала скажите пожалуйста как я могу к Вам обращаться?', reply_markup=ReplyKeyboardRemove())
     async with state.proxy() as data:
-#        data['db_current_datetime'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
-        data['db_current_datetime'] = datetime.now()
+        data['db_current_datetime'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S:%f'")[:-3]
         data['db_client_name'] = '-'
         data['db_client_phone'] = '-'
         data['db_check_special'] = '-'
@@ -120,12 +121,20 @@ async def function_check_special(message: types.Message, state: FSMContext):
     elif message.text.lower().translate(str.maketrans('', '', string.punctuation)) in DONT_KNOW_SET:
         async with state.proxy() as data:
             data['db_check_special'] = 'DONT_KNOW'
+            sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1Idv2_R_zxhqo6j9SIY0oBIyJQskL46jo-vw3TKp-YI8/edit#gid=0')
+            worksheet = sh.sheet1
+            transaction = [data['db_current_datetime'], data['db_client_name'], data['db_client_phone'], data['db_check_special'], data['db_cargo'], data['db_veight'], data['db_kind_loading'], data['db_check_pallets'], data['db_pallets_count'], data['db_pallets_dimensions'], data['db_cargo_dimensions'], data['db_add_carcas'], data['db_addres_loading'], data['db_addres_docs'], data['db_addres_unloading'], data['db_date_loading'], data['db_date_unloading'], data['db_custom_export'], data['db_export_declaration'], data['db_custom_import'], data['db_insurance_cost'], data['db_attention']]
+            worksheet.append_row(transaction)
         await message.answer('Спасибо за Ваш запрос, '+data['db_client_name']+'! Наш менеджер свяжется с Вами в ближайшее время для уточнения информации. До свидания!', reply_markup=client_keyboard.start_kb)
         await sqlite_db.sql_add_command(state)
-        await FSMQuestion.client_phone.set()
+        await state.finish()
     elif message.text.lower().translate(str.maketrans('', '', string.punctuation)) in YES_SET:
         async with state.proxy() as data:
             data['db_check_special'] = 'SPECIAL'
+            sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1Idv2_R_zxhqo6j9SIY0oBIyJQskL46jo-vw3TKp-YI8/edit#gid=0')
+            worksheet = sh.sheet1
+            transaction = [data['db_current_datetime'], data['db_client_name'], data['db_client_phone'], data['db_check_special'], data['db_cargo'], data['db_veight'], data['db_kind_loading'], data['db_check_pallets'], data['db_pallets_count'], data['db_pallets_dimensions'], data['db_cargo_dimensions'], data['db_add_carcas'], data['db_addres_loading'], data['db_addres_docs'], data['db_addres_unloading'], data['db_date_loading'], data['db_date_unloading'], data['db_custom_export'], data['db_export_declaration'], data['db_custom_import'], data['db_insurance_cost'], data['db_attention']]
+            worksheet.append_row(transaction)
         await message.answer('Спасибо за Ваш запрос, '+data['db_client_name']+'! Наш менеджер свяжется с Вами в ближайшее время для уточнения информации. До свидания!', reply_markup=client_keyboard.start_kb)
         await sqlite_db.sql_add_command(state)
         await state.finish()
@@ -193,6 +202,10 @@ async def function_check_pallets(message: types.Message, state: FSMContext):
     elif message.text.lower().translate(str.maketrans('', '', string.punctuation)) in DONT_KNOW_SET:
         async with state.proxy() as data:
             data['db_check_pallets'] = 'DONT_KNOW'
+            sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1Idv2_R_zxhqo6j9SIY0oBIyJQskL46jo-vw3TKp-YI8/edit#gid=0')
+            worksheet = sh.sheet1
+            transaction = [data['db_current_datetime'], data['db_client_name'], data['db_client_phone'], data['db_check_special'], data['db_cargo'], data['db_veight'], data['db_kind_loading'], data['db_check_pallets'], data['db_pallets_count'], data['db_pallets_dimensions'], data['db_cargo_dimensions'], data['db_add_carcas'], data['db_addres_loading'], data['db_addres_docs'], data['db_addres_unloading'], data['db_date_loading'], data['db_date_unloading'], data['db_custom'], data['db_custom_export'], data['db_export_declaration'], data['db_custom_import'], data['db_insurance_cost'], data['db_attention']]
+            worksheet.append_row(transaction)
         await message.answer('Спасибо за Ваш запрос, '+data['db_client_name']+'! Наш менеджер свяжется с Вами в ближайшее время для уточнения информации. До свидания!', reply_markup=client_keyboard.start_kb)
         await sqlite_db.sql_add_command(state)
         await state.finish()
@@ -576,6 +589,10 @@ async def function_check_data_3(message: types.Message, state: FSMContext):
     elif message.text.lower().translate(str.maketrans('', '', string.punctuation)) in YES_SET:
         async with state.proxy() as data:
             await message.answer('Спасибо, '+data['db_client_name']+'! Ваша заявка принята. Наш менеджер свяжется с Вами в ближайшее время с конкретным предложением. Всего хорошего!', reply_markup=client_keyboard.start_kb)
+            sh = gc.open_by_url('https://docs.google.com/spreadsheets/d/1Idv2_R_zxhqo6j9SIY0oBIyJQskL46jo-vw3TKp-YI8/edit#gid=0')
+            worksheet = sh.sheet1
+            transaction = [data['db_current_datetime'], data['db_client_name'], data['db_client_phone'], data['db_check_special'], data['db_cargo'], data['db_veight'], data['db_kind_loading'], data['db_check_pallets'], data['db_pallets_count'], data['db_pallets_dimensions'], data['db_cargo_dimensions'], data['db_add_carcas'], data['db_addres_loading'], data['db_addres_docs'], data['db_addres_unloading'], data['db_date_loading'], data['db_date_unloading'], data['db_custom_export'], data['db_export_declaration'], data['db_custom_import'], data['db_insurance_cost'], data['db_attention']]
+            worksheet.append_row(transaction)
         await sqlite_db.sql_add_command(state)
         await state.finish()
 
