@@ -6,11 +6,12 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from data_base import sqlite_db
 from keyboards import client_keyboard
 from dictionary import YES_SET, NO_SET, DONT_KNOW_SET, STOP_SET, CENSURE_SET
-from datetime import datetime
+import datetime
 import string
 import gspread
 
 gc = gspread.service_account(filename='movebot-359618-6eadda2de784.json')
+
 
 class FSMQuestion(StatesGroup):
     client_name = State()
@@ -45,9 +46,11 @@ class FSMQuestion(StatesGroup):
 
 #Начало опроса. Запрашиваем имя клиента.
 async def begin(message: types.Message, state: FSMContext):
-    await message.answer('Здравствуйте9! Я Ваш личный помощник по организации перевозок. Для того, чтобы мы могли обработать заказ, и сделать максимально выгодное предложение, мне необходимо задать несколько вопросов. Для начала скажите пожалуйста как я могу к Вам обращаться?', reply_markup=ReplyKeyboardRemove())
+    await message.answer('Здравствуйте! Я Ваш личный помощник по организации перевозок. Для того, чтобы мы могли обработать заказ, и сделать максимально выгодное предложение, мне необходимо задать несколько вопросов. Для начала скажите пожалуйста как я могу к Вам обращаться?', reply_markup=ReplyKeyboardRemove())
+    delta = datetime.timedelta(hours=3, minutes=0)
+    dt = datetime.datetime.now(datetime.timezone.utc) + delta
     async with state.proxy() as data:
-        data['db_current_datetime'] = datetime.now().strftime("%d/%m/%Y, %H:%M:%S:%f'")[:-3]
+        data['db_current_datetime'] = str(dt)[:-9]
         data['db_client_name'] = '-'
         data['db_client_phone'] = '-'
         data['db_check_special'] = '-'
@@ -182,7 +185,7 @@ async def function_cargo(message: types.Message, state: FSMContext):
         else:
             async with state.proxy() as data:
                 data['db_cargo'] = message.text
-            await message.answer('Какова масса груза брутто? (Вместе с тарой)')
+            await message.answer('Какова масса груза брутто? (Вместе с тарой) Пожалуйста не забудьте указать единицы измерения.')
             await FSMQuestion.veight.set()
     else:
         await message.answer('Я могу принимать только текстовые сообщения. Давайте попробуем еще раз.')
@@ -710,10 +713,10 @@ async def function_check_data_1(message: types.Message, state: FSMContext):
                 data['db_attention'] = message.text
             if data['db_check_pallets'] == 'PALLETS':
                 await message.answer('И все же, '+data['db_client_name']+', необходимо проверить все ли я записал верно:\nВаш груз - '+data['db_cargo']+',\nмасса брутто составляет - '+data['db_veight']+',\nвид погрузки - '+data['db_kind_loading']+',\nгруз находится на паллетах - '+data['db_pallets_dimensions']+' в количестве - '+data['db_pallets_count']+'шт.'+',\nдополнительные ремни или обрешетка - '+data['db_add_carcas']+'.\nВсе верно?', reply_markup=client_keyboard.choice_kb)
-                await FSMQuestion.attention.set()
+                await FSMQuestion.check_data_1.set()
             elif data['db_check_pallets'] == 'NOT_PALLETS':
                 await message.answer('И все же, нам необходимо проверить все ли я записал верно:\nВаш груз - '+data['db_cargo']+',\nмасса брутто составляет - '+data['db_veight']+',\nвид погрузки - '+data['db_kind_loading']+',\nгруз находится без паллет и занимает в кузове - '+data['db_cargo_dimensions']+',\nдополнительные ремни или обрешетка - '+data['db_add_carcas']+'.\nВсе верно?', reply_markup=client_keyboard.choice_kb)
-                await FSMQuestion.attention.set()
+                await FSMQuestion.check_data_1.set()
     else:
         await message.answer('Я могу принимать только текстовые сообщения. Давайте попробуем еще раз.')
         await FSMQuestion.check_data_1.set()
@@ -748,18 +751,18 @@ async def function_check_data_2(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 if data['db_addres_docs'] == 'DONT_KNOW':
                     await message.answer('И все же нам необходимо проверить:\nгруз забираем в '+data['db_addres_loading']+' '+data['db_date_loading']+',\nи должны доставить груз '+data['db_date_unloading']+' в '+data['db_addres_unloading']+'.\nТаможенное оформление при осуществлении перевозки не требуется, а адрес оформления документов на груз мы уточним у Вас по телефону.\nВсе правильно?', reply_markup=client_keyboard.choice_kb)
-                    await FSMQuestion.check_data_1.set()
+                    await FSMQuestion.check_data_2.set()
                 else:
                     async with state.proxy() as data:
                         if data['db_custom'] == 'NO':
                             await message.answer('И все же нам необходимо проверить:\nгруз забираем в '+data['db_addres_loading']+' '+data['db_date_loading']+',\nдокументы на груз получаем в '+data['db_addres_docs']+',\nи должны доставить груз '+data['db_date_unloading']+' в '+data['db_addres_unloading']+'.\nТаможенное оформление при осуществлении перевозки не требуется.\nВсе правильно?', reply_markup=client_keyboard.choice_kb)
-                            await FSMQuestion.check_data_1.set()
+                            await FSMQuestion.check_data_2.set()
                         elif data['db_custom'] == 'DONT_KNOW':
                             await message.answer('И все же нам необходимо проверить:\nгруз забираем в '+data['db_addres_loading']+' '+data['db_date_loading']+',\nдокументы на груз получаем в '+data['db_addres_docs']+',\nи должны доставить груз '+data['db_date_unloading']+' в '+data['db_addres_unloading']+'.\nНеобходимость таможенного оформление мы уточним у Вас по телефону\nВсе правильно?', reply_markup=client_keyboard.choice_kb)
-                            await FSMQuestion.check_data_1.set()
+                            await FSMQuestion.check_data_2.set()
                         else:
                             await message.answer('И все же нам необходимо проверить:\nгруз забираем в '+data['db_addres_loading']+' '+data['db_date_loading']+',\nдокументы на груз получаем в '+data['db_addres_docs']+',\nи должны доставить груз '+data['db_date_unloading']+' в '+data['db_addres_unloading']+'.\nВсе правильно?', reply_markup=client_keyboard.choice_kb)
-                            await FSMQuestion.check_data_1.set()
+                            await FSMQuestion.check_data_2.set()
     else:
         await message.answer('Я могу принимать только текстовые сообщения. Давайте попробуем еще раз.')
         await FSMQuestion.check_data_2.set()
@@ -809,7 +812,7 @@ async def function_check_data_3(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 if data['db_custom'] == 'YES':
                     await message.answer('И все же нам необходимо проверить:\nтаможня вывоза будет - '+data['db_custom_export']+',\nдокументы на экспорт оформляет - '+data['db_export_declaration']+',\nтаможня ввоза будет - '+data['db_custom_import']+',\nгруз страхуем на сумму - '+data['db_insurance_cost']+'.\nЯ все точно записал?', reply_markup=client_keyboard.choice_kb)
-                    await FSMQuestion.check_data_2.set()
+                    await FSMQuestion.check_data_3.set()
                 else:
                     await message.answer('Ой! Кажется Вы меня сломали (((')
                     await state.finish()
