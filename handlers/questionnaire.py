@@ -9,6 +9,7 @@ from dictionary import YES_SET, NO_SET, DONT_KNOW_SET, STOP_SET, CENSURE_SET
 import datetime
 import string
 import gspread
+import re
 
 gc = gspread.service_account(filename='movebot-359618-6eadda2de784.json')
 
@@ -89,17 +90,20 @@ async def function_client_name(message: types.Message, state: FSMContext):
             await message.answer('Ваше сообщение слишком длинное. Сформулируйте пожалуйста покороче.')
             await FSMQuestion.client_name.set()
         else:
-            async with state.proxy() as data:
-                data['db_client_name'] = message.text
-            await message.answer(data['db_client_name']+', по какому номеру телефона мы можем с Вами связаться? Указывайте пожалуйста номер телефона в международном формате.', reply_markup=client_keyboard.contact_kb)
-            await FSMQuestion.client_phone.set()
+            if str.isalpha(message.text):
+                async with state.proxy() as data:
+                    data['db_client_name'] = message.text
+                await message.answer(data['db_client_name']+', по какому номеру телефона мы можем с Вами связаться? Указывайте пожалуйста номер телефона в международном формате.', reply_markup=client_keyboard.contact_kb)
+                await FSMQuestion.client_phone.set()
+            else:
+                await message.answer('Имя может содержать только буквы. Введите пожалуйста еще раз.')
+                await FSMQuestion.client_name.set()
     else:
         await message.answer('Я могу принимать только текстовые сообщения. Давайте попробуем еще раз.')
         await FSMQuestion.client_name.set()
 
 #Получаем телефон клиента. Запрашиваем тип транспорта.
 async def function_client_phone(message: types.Message, state: FSMContext):
-#    if message.content_type == 'contact':
     if message.contact:
         async with state.proxy() as data:
             data['db_client_phone'] = message.contact.phone_number
@@ -117,10 +121,15 @@ async def function_client_phone(message: types.Message, state: FSMContext):
             await message.answer('Ваше сообщение слишком длинное. Сформулируйте пожалуйста покороче.')
             await FSMQuestion.client_phone.set()
         else:
-            async with state.proxy() as data:
-                data['db_client_phone'] = message.text
-            await message.answer(data['db_client_name']+', cкажите пожалуйста, для перевозки груза необходимы какие-то особые условия? Возможно груз является негабаритным, опасным, или скоропортящимся? Либо для его перевозки необходимо соблюдение температурного режима, наличие специальных разрешений, или какой-либо узкоспециализированный транспорт?', reply_markup=client_keyboard.choice_kb)
-            await FSMQuestion.check_special.set()
+            phone_number = re.sub("[^0-9]", "", message.text)
+            if len(phone_number) < 10:
+                await message.answer('Кажется в номере телефона не хватает цифр. Проверьте пожалуйста еще раз, или воспользуйтесь кнопкой "Отправить номер телефона".')
+                await FSMQuestion.client_phone.set()
+            else:
+                async with state.proxy() as data:
+                    data['db_client_phone'] = phone_number
+                await message.answer(data['db_client_name']+', cкажите пожалуйста, для перевозки груза необходимы какие-то особые условия? Возможно груз является негабаритным, опасным, или скоропортящимся? Либо для его перевозки необходимо соблюдение температурного режима, наличие специальных разрешений, или какой-либо узкоспециализированный транспорт?', reply_markup=client_keyboard.choice_kb)
+                await FSMQuestion.check_special.set()
     else:
         await message.answer('Я могу принимать только текстовые сообщения. Давайте попробуем еще раз.')
         await FSMQuestion.client_phone.set()
