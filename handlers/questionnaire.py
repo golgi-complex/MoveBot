@@ -90,7 +90,7 @@ async def function_client_name(message: types.Message, state: FSMContext):
             await message.answer('Ваше сообщение слишком длинное. Сформулируйте пожалуйста покороче.')
             await FSMQuestion.client_name.set()
         else:
-            if str.isalpha(message.text):
+            if len(message.text) == len(re.sub("[^A-Za-zА-Яа-я' ']", "", message.text)):
                 async with state.proxy() as data:
                     data['db_client_name'] = message.text
                 await message.answer(data['db_client_name']+', по какому номеру телефона мы можем с Вами связаться? Указывайте пожалуйста номер телефона в международном формате.', reply_markup=client_keyboard.contact_kb)
